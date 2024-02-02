@@ -29,7 +29,6 @@ async function run() {
         const dataBase = client.db('afsRun')
         const userCollection = dataBase.collection('users');
 
-
         app.post('/users', async (req, res) => {
             const data = req.body;
             const result = await userCollection.insertOne(data);
