@@ -28,6 +28,7 @@ async function run() {
         // Connect the client to the server	(optional starting in v4.7)
         const dataBase = client.db('afsRun')
         const userCollection = dataBase.collection('users');
+        const runsCollection = dataBase.collection('allRuns');
 
         app.post('/users', async (req, res) => {
             const data = req.body;
@@ -64,6 +65,18 @@ async function run() {
             const result = await userCollection.updateOne(query, updatedData, options)
             res.send(result)
         })
+
+        app.post('/allRuns', async (req, res) => {
+            const data = req.body;
+            const result = await runsCollection.insertOne(data)
+            res.send(result)
+        })
+
+        app.get('/allRuns', async (req, res) => {
+            const result = await runsCollection.find().toArray()
+            res.send(result)
+        })
+
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
