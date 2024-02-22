@@ -1,16 +1,13 @@
 var express = require('express')
-var cors = require('cors')
+var jwt = require('jsonwebtoken')
 require('dotenv').config()
+var cors = require('cors')
 var app = express()
 const { MongoClient, ServerApiVersion } = require('mongodb');
 const port = process.env.PORT || 5000;
 
 app.use(cors())
 app.use(express.json())
-
-app.get('/', (req, res) => {
-    res.send('server running')
-})
 
 const uri = "mongodb+srv://afsrun771:2f3le4QqQlcifPLL@cluster0.gdhe0uf.mongodb.net/?retryWrites=true&w=majority";
 
@@ -22,6 +19,28 @@ const client = new MongoClient(uri, {
         deprecationErrors: true,
     }
 });
+
+const verify = (req, res, next) => {
+    const authorization = req.headers.authorization;
+    if (!authorization) {
+        return res.status(401).send({ error: true }, 'unauthorized access')
+    }
+    const token = authorization.split(' ')[1];
+    jwt.verify(token, process.env.ACCESS_TOKEN, (error, decoded) => {
+        if (error) {
+            return res.send({ error: true }, 'unauthorized access')
+        }
+        else {
+            req.decoded = decoded;
+            next()
+        }
+    })
+}
+
+
+app.get('/', (req, res) => {
+    res.send('server running')
+})
 
 async function run() {
     try {
@@ -41,11 +60,15 @@ async function run() {
             res.send(data);
         })
 
-        app.get('/users/:id', async (req, res) => {
+        app.get('/users/:id', verify, async (req, res) => {
             const id = req.params.id;
             const query = { uid: { $eq: id } }
+            const decoded = req.decoded;
+            console.log(decoded);
             const data = await userCollection.findOne(query)
-            res.send(data)
+            if (data.email === decoded.email) {
+                res.send(data)
+            }
         })
 
         app.put('/users/:id', async (req, res) => {
@@ -77,6 +100,11 @@ async function run() {
             res.send(result)
         })
 
+        app.post('/jwt', (req, res) => {
+            const user = req.body;
+            const token = jwt.sign(user, process.env.ACCESS_TOKEN, { expiresIn: '1hr' })
+            res.send({ token })
+        })
 
         // Send a ping to confirm a successful connection
         await client.db("admin").command({ ping: 1 });
@@ -87,9 +115,6 @@ async function run() {
     }
 }
 run().catch(console.dir);
-
-
-
 
 app.listen(port, () => {
     console.log(port);
